@@ -29,7 +29,7 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 	raycast.distanceTraveled = 0
 	raycast.results = {}
 	raycast.touched = nil
-	raycast.state = { _previousResults = #raycast.results }
+	raycast.state = {}
 
 	local thread = coroutine.running()
 
@@ -42,6 +42,7 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 
 		raycast.position = new
 		raycast.distanceTraveled += (new - old).Magnitude
+		raycast.touched = raycastResult
 	end
 
 	local connection
@@ -67,11 +68,6 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 				raycast.direction = direction
 			end
 		end
-
-		raycast.touched = if #raycast.results > raycast.state._previousResults
-			then raycast.results[#raycast.results]
-			else nil
-		raycast.state._previousResults = #raycast.results
 	end)
 
 	coroutine.yield()
