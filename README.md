@@ -1,2 +1,3 @@
-# flashcast
-flashy casty
+# Flashcast
+
+simple library for bullets and such made for Roblox
