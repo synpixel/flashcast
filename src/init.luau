@@ -81,8 +81,6 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 	end)
 
 	coroutine.yield()
-
-	raycast.touched = nil
 	return table.freeze(raycast)
 end
 
