@@ -7,6 +7,7 @@ export type Raycast = {
 	direction: Vector3,
 	results: { RaycastResult },
 	state: { lastTick: number, distanceTraveled: number, touched: RaycastResult?, [any]: any },
+	tick: number?,
 }
 
 local Flashcast = {}
@@ -35,6 +36,7 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 		distanceTraveled = 0,
 		touched = nil,
 	}
+	raycast.tick = self._tick
 
 	local thread = coroutine.running()
 
@@ -53,7 +55,7 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 	local connection
 	connection = RunService.Heartbeat:Connect(function()
 		local deltaTime = os.clock() - raycast.state.lastTick
-		if deltaTime < self._tick then
+		if deltaTime < raycast.tick then
 			return
 		end
 
