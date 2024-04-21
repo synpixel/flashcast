@@ -17,6 +17,11 @@ Flashcast.Result = {
 	Stop = 2,
 }
 
+local function tick(self: Flashcast, tick: number): Flashcast
+	self._tick = tick
+	return self
+end
+
 local function onStep(self: Flashcast, callback: OnStepCallback): Flashcast
 	table.insert(self._onStepCallbacks, callback)
 	return self
@@ -29,7 +34,7 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 	raycast.distanceTraveled = 0
 	raycast.results = {}
 	raycast.touched = nil
-	raycast.state = {}
+	raycast.state = { _lastTick = os.clock() - self._tick }
 
 	local thread = coroutine.running()
 
@@ -46,28 +51,33 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 	end
 
 	local connection
-	connection = RunService.Heartbeat:Connect(function(deltaTime)
+	connection = RunService.Heartbeat:Connect(function()
+		local deltaTime = os.clock() - raycast.state._lastTick
+		if deltaTime < self._tick then
+			return
+		end
+
 		move(raycast.position, raycast.position + raycast.direction * deltaTime)
 
 		for _, callback in self._onStepCallbacks do
 			local direction = callback(raycast, deltaTime)
 
-			if typeof(direction) ~= "Vector3" and typeof(direction) ~= "number" then
+			if direction == Flashcast.Result.Pass then
+				continue
+			elseif direction == Flashcast.Result.Stop then
+				connection:Disconnect()
+				task.spawn(thread)
+				return
+			elseif typeof(direction) == "Vector3" then
+				raycast.direction = direction
+			else
 				error(
 					"onStep callbacks must return a Vector3 or a Flashcast.Result. if you do not wish to change the direction, return Flashcast.Result.Pass."
 				)
 			end
-
-			if direction == Flashcast.Result.Pass then
-				continue
-			elseif direction == Flashcast.Result.Stop then
-				task.spawn(thread)
-				connection:Disconnect()
-				return
-			else
-				raycast.direction = direction
-			end
 		end
+
+		raycast.state._lastTick = os.clock()
 	end)
 
 	coroutine.yield()
@@ -78,7 +88,9 @@ end
 
 function Flashcast.new()
 	return {
+		_tick = 0,
 		_onStepCallbacks = {} :: { OnStepCallback },
+		tick = tick,
 		onStep = onStep,
 		cast = cast,
 	}
