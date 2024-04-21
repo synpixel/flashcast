@@ -57,8 +57,6 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 			return
 		end
 
-		move(raycast.position, raycast.position + raycast.direction * deltaTime)
-
 		for _, callback in self._onStepCallbacks do
 			local direction = callback(raycast, deltaTime)
 
@@ -77,6 +75,7 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 			end
 		end
 
+		move(raycast.position, raycast.position + raycast.direction * deltaTime)
 		raycast.state.lastTick = os.clock()
 	end)
 
