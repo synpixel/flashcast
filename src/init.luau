@@ -5,10 +5,8 @@ export type OnStepCallback = (raycast: Raycast, deltaTime: number) -> Vector3 | 
 export type Raycast = {
 	position: Vector3,
 	direction: Vector3,
-	distanceTraveled: number,
 	results: { RaycastResult },
-	touched: RaycastResult?,
-	state: { [any]: any },
+	state: { lastTick: number, distanceTraveled: number, touched: RaycastResult?, [any]: any },
 }
 
 local Flashcast = {}
@@ -31,10 +29,12 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 	local raycast = {}
 	raycast.position = origin
 	raycast.direction = direction
-	raycast.distanceTraveled = 0
 	raycast.results = {}
-	raycast.touched = nil
-	raycast.state = { _lastTick = os.clock() - self._tick }
+	raycast.state = {
+		lastTick = os.clock() - self._tick,
+		distanceTraveled = 0,
+		touched = nil,
+	}
 
 	local thread = coroutine.running()
 
@@ -46,13 +46,13 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 		end
 
 		raycast.position = new
-		raycast.distanceTraveled += (new - old).Magnitude
-		raycast.touched = raycastResult
+		raycast.state.distanceTraveled += (new - old).Magnitude
+		raycast.state.touched = raycastResult
 	end
 
 	local connection
 	connection = RunService.Heartbeat:Connect(function()
-		local deltaTime = os.clock() - raycast.state._lastTick
+		local deltaTime = os.clock() - raycast.state.lastTick
 		if deltaTime < self._tick then
 			return
 		end
@@ -77,7 +77,7 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 			end
 		end
 
-		raycast.state._lastTick = os.clock()
+		raycast.state.lastTick = os.clock()
 	end)
 
 	coroutine.yield()
