@@ -57,6 +57,8 @@ end
 --- @param direction Vector3
 --- @param raycastParams? RaycastParams
 --- @return Raycast
+--- @yields
+--- This will yield until one of the step callbacks returns Result.Stop
 local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycastParams: RaycastParams?): Raycast
 	local raycast = {}
 	raycast.position = origin
