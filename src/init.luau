@@ -33,6 +33,16 @@ Flashcast.Result = {
 	Stop = 2,
 }
 
+--- @method worldRoot
+--- @within Flashcast
+--- @param worldRoot WorldRoot
+--- @return Flashcast
+--- Overrides the default [WorldRoot](https://create.roblox.com/docs/reference/engine/classes/WorldRoot) ([Workspace](https://create.roblox.com/docs/reference/engine/classes/Workspace))
+local function worldRoot(self: Flashcast, worldRoot: WorldRoot)
+	self._worldRoot = worldRoot
+	return self
+end
+
 --- @method tick
 --- @within Flashcast
 --- @param tick number
@@ -100,7 +110,7 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 	local function move(old: Vector3, new: Vector3, deltaTime: number)
 		local raycastResult = if self._spatialQuery
 			then self._spatialQuery(raycast, deltaTime)
-			else workspace:Raycast(old, (new - old), raycastParams)
+			else self._worldRoot:Raycast(old, (new - old), raycastParams)
 
 		if raycastResult then
 			table.insert(raycast.results, raycastResult)
@@ -156,10 +166,12 @@ end
 --- @return Flashcast
 function Flashcast.new()
 	return {
+		_worldRoot = workspace,
 		_tick = 0,
 		_beforeStepCallbacks = {} :: { StepCallback },
 		_afterStepCallbacks = {} :: { StepCallback },
 		_spatialQuery = nil,
+		worldRoot = worldRoot,
 		tick = tick,
 		beforeStep = beforeStep,
 		afterStep = afterStep,
