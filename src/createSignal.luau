@@ -1,6 +1,7 @@
-local function createConnection<T...>(signal: Signal<T...>, callback: (T...) -> (), once: boolean): Connection
+local function createConnection<T...>(signal: Signal<T...>, callback: (T...) -> ()): Connection
 	local connection = {}
 	connection._callback = callback
+	connection._once = false
 	connection.disconnected = false
 
 	function connection:disconnect()
@@ -30,14 +31,15 @@ local function createSignal<T...>(): Signal<T...>
 
 	--- @within Signal
 	function signal:connect(callback: (T...) -> ()): Connection
-		local connection = createConnection(signal, callback, false)
+		local connection = createConnection(signal, callback)
 		table.insert(signal._connections, connection)
 		return connection
 	end
 
 	--- @within Signal
 	function signal:once(callback: (T...) -> ()): Connection
-		local connection = createConnection(signal, callback, true)
+		local connection = createConnection(signal, callback)
+		connection._once = true
 		table.insert(signal._connections, connection)
 		return connection
 	end
