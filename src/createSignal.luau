@@ -26,8 +26,7 @@ local function createSignal<T...>(): Signal<T...>
 	--- @class Signal
 	local signal = {}
 	signal._connections = {}
-
-	local thread = coroutine.running()
+	signal._yieldedThreads = {}
 
 	--- @within Signal
 	function signal:connect(callback: (T...) -> ()): Connection
@@ -54,11 +53,15 @@ local function createSignal<T...>(): Signal<T...>
 			task.spawn(connection._callback, ...)
 		end
 
-		task.spawn(thread, ...)
+		for index, thread in signal._yieldedThreads do
+			table.remove(signal._yieldedThreads, index)
+			task.spawn(thread, ...)
+		end
 	end
 
 	--- @within Signal
 	function signal:wait(): T...
+		table.insert(signal._yieldedThreads, coroutine.running())
 		return coroutine.yield()
 	end
 
