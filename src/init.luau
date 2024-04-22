@@ -130,16 +130,18 @@ local function cast(
 	local connection
 
 	local function move(deltaTime: number)
+		local direction = raycast.direction * deltaTime
+
 		local raycastResult = if self._spatialQuery
 			then self._spatialQuery(raycast, deltaTime)
-			else self._worldRoot:Raycast(raycast.position, raycast.direction * deltaTime, raycastParams)
+			else self._worldRoot:Raycast(raycast.position, direction, raycastParams)
 
 		if raycastResult then
 			table.insert(raycast.results, raycastResult)
 		end
 
-		raycast.position = raycast.position + raycast.direction * deltaTime
-		raycast.state.distanceTraveled += raycast.direction.Magnitude * deltaTime
+		raycast.position += direction
+		raycast.state.distanceTraveled += direction.Magnitude
 		raycast.state.touched = raycastResult
 	end
 
