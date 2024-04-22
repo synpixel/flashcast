@@ -156,10 +156,7 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 	connection = RunService.Heartbeat:Connect(function()
 		local deltaTime = os.clock() - raycast.state.lastTick
 
-		if
-			processStepCallbacks((self._onStepNoTickCallbacks :: any) :: { StepCallback }, deltaTime)
-			== Flashcast.Result.Stop
-		then
+		if processStepCallbacks(self._onStepNoTickCallbacks, deltaTime) == Flashcast.Result.Stop then
 			return
 		end
 
