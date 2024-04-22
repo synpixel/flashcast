@@ -129,17 +129,17 @@ local function cast(
 	local thread = coroutine.running()
 	local connection
 
-	local function move(old: Vector3, new: Vector3, deltaTime: number)
+	local function move(deltaTime: number)
 		local raycastResult = if self._spatialQuery
 			then self._spatialQuery(raycast, deltaTime)
-			else self._worldRoot:Raycast(old, (new - old), raycastParams)
+			else self._worldRoot:Raycast(raycast.position, raycast.direction * deltaTime, raycastParams)
 
 		if raycastResult then
 			table.insert(raycast.results, raycastResult)
 		end
 
-		raycast.position = new
-		raycast.state.distanceTraveled += (new - old).Magnitude
+		raycast.position = raycast.position + raycast.direction * deltaTime
+		raycast.state.distanceTraveled += raycast.direction.Magnitude * deltaTime
 		raycast.state.touched = raycastResult
 	end
 
@@ -172,7 +172,7 @@ local function cast(
 			return
 		end
 
-		move(raycast.position, raycast.position + raycast.direction * deltaTime, deltaTime)
+		move(deltaTime)
 		processStepCallbacks(self._afterStepCallbacks, deltaTime)
 
 		raycast.state.lastTick = os.clock()
