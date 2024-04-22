@@ -1,6 +1,6 @@
 local RunService = game:GetService("RunService")
 
-export type OnStepCallback = (raycast: Raycast, deltaTime: number) -> Vector3 | number
+export type StepCallback = (raycast: Raycast, deltaTime: number) -> Vector3 | number
 
 export type Raycast = {
 	position: Vector3,
@@ -21,8 +21,8 @@ local function tick(self: Flashcast, tick: number): Flashcast
 	return self
 end
 
-local function onStep(self: Flashcast, callback: OnStepCallback): Flashcast
-	table.insert(self._onStepCallbacks, callback)
+local function onStep(self: Flashcast, callback: StepCallback): Flashcast
+	table.insert(self._stepCallbacks, callback)
 	return self
 end
 
@@ -59,7 +59,7 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 			return
 		end
 
-		for _, callback in self._onStepCallbacks do
+		for _, callback in self._stepCallbacks do
 			local direction = callback(raycast, deltaTime)
 
 			if direction == Flashcast.Result.Pass then
@@ -72,7 +72,7 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 				raycast.direction = direction
 			else
 				error(
-					"onStep callbacks must return a Vector3 or a Flashcast.Result. if you do not wish to change the direction, return Flashcast.Result.Pass."
+					"step callbacks must return a Vector3 or a Flashcast.Result. if you do not wish to change the direction, return Flashcast.Result.Pass."
 				)
 			end
 		end
@@ -88,7 +88,7 @@ end
 function Flashcast.new()
 	return {
 		_tick = 0,
-		_onStepCallbacks = {} :: { OnStepCallback },
+		_stepCallbacks = {} :: { StepCallback },
 		tick = tick,
 		onStep = onStep,
 		cast = cast,
