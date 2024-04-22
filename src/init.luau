@@ -75,10 +75,10 @@ end
 
 --- @method onStepNoTick
 --- @within Flashcast
---- @param step (raycast: Raycast) -> ()
+--- @param step StepCallback
 --- @return Flashcast
 --- Adds a callback scheduled to run on every step regardless of the tick set, should not be used for expensive operations
-local function onStepNoTick(self: Flashcast, step: (raycast: Raycast) -> ())
+local function onStepNoTick(self: Flashcast, step: StepCallback)
 	table.insert(self._onStepNoTickCallbacks, step)
 	return self
 end
@@ -156,8 +156,11 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 	connection = RunService.Heartbeat:Connect(function()
 		local deltaTime = os.clock() - raycast.state.lastTick
 
-		for _, callback in self._onStepNoTickCallbacks do
-			callback(raycast)
+		if
+			processStepCallbacks((self._onStepNoTickCallbacks :: any) :: { StepCallback }, deltaTime)
+			== Flashcast.Result.Stop
+		then
+			return
 		end
 
 		if deltaTime < raycast.tick then
@@ -185,7 +188,7 @@ function Flashcast.new()
 		_tick = 0,
 		_beforeStepCallbacks = {} :: { StepCallback },
 		_afterStepCallbacks = {} :: { StepCallback },
-		_onStepNoTickCallbacks = {} :: { (raycast: Raycast) -> () },
+		_onStepNoTickCallbacks = {} :: { StepCallback },
 		_spatialQuery = nil,
 		worldRoot = worldRoot,
 		tick = tick,
