@@ -14,14 +14,13 @@ local function gravity(raycast: Flashcast.Raycast, deltaTime: number)
     local perpendicularComponent = raycast.direction - parallelComponent
     local newDirection = perpendicularComponent + (parallelComponent + GRAVITY * deltaTime)
 
-    return newDirection.Unit * raycast.direction.Magnitude
+    raycast.direction = newDirection.Unit * raycast.direction.Magnitude
 end
 
 local function maxDistance(raycast: Flashcast.Raycast)
     if raycast.state.distanceTraveled > MAX_DISTANCE then
         return Flashcast.Result.Stop
     end
-    return Flashcast.Result.Pass
 end
 
 local flashcast = Flashcast.new()
