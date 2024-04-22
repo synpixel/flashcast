@@ -25,8 +25,8 @@ local function maxDistance(raycast: Flashcast.Raycast)
 end
 
 local flashcast = Flashcast.new()
-    :onStep(gravity)
-    :onStep(maxDistance)
+    :beforeStep(maxDistance)
+    :afterStep(gravity)
 
 local direction = Random.new():NextUnitVector()
 local raycast = flashcast:cast(Vector3.new(0, 10, 0), direction * SPEED)
