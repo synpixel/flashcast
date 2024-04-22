@@ -1,4 +1,5 @@
 local RunService = game:GetService("RunService")
+local createSignal = require(script.createSignal)
 
 --- @type StepCallback (raycast: Raycast, deltaTime: number) -> Result?
 --- @within Flashcast
@@ -13,6 +14,7 @@ export type StepCallback = (raycast: Raycast, deltaTime: number) -> number?
 --- .results { RaycastResult } -- RaycastResults ordered from earliest to latest
 --- .state { lastTick: number, distanceTraveled: number, touched?: RaycastResult, [any]: any } -- for preserving state throughout the raycasting
 --- .tick number -- by default the Flashcast instance's tick
+--- .stopped Signal<()>
 export type Raycast = {
 	position: Vector3,
 	direction: Vector3,
@@ -20,6 +22,7 @@ export type Raycast = {
 	results: { RaycastResult },
 	state: { lastTick: number, distanceTraveled: number, touched: RaycastResult?, [any]: any },
 	tick: number,
+	stopped: createSignal.Signal<()>,
 }
 
 --- @class Flashcast
@@ -77,7 +80,7 @@ end
 --- @param step StepCallback
 --- @return Flashcast
 --- Adds a callback scheduled to run on every step regardless of the tick set, should not be used for expensive operations
-local function onStepNoTick(self: Flashcast, step: StepCallback)
+local function onStepNoTick(self: Flashcast, step: StepCallback): Flashcast
 	table.insert(self._onStepNoTickCallbacks, step)
 	return self
 end
@@ -99,8 +102,6 @@ end
 --- @param raycastParams? RaycastParams
 --- @param defaultState? { [any]: any }
 --- @return Raycast
---- @yields
---- This will yield until one of the step callbacks returns Result.Stop
 local function cast(
 	self: Flashcast,
 	origin: Vector3,
@@ -119,6 +120,7 @@ local function cast(
 		touched = nil,
 	}
 	raycast.tick = self._tick
+	raycast.stopped = createSignal()
 
 	if defaultState then
 		for key, value in defaultState do
@@ -126,15 +128,27 @@ local function cast(
 		end
 	end
 
-	local thread = coroutine.running()
-	local connection
+	table.insert(self._raycasts, raycast)
+	return raycast
+end
 
-	local function move(deltaTime: number)
+--- @method destroy
+--- @within Flashcast
+--- Enables the Flashcast instance to be garbage collected
+local function destroy(self: Flashcast)
+	for _, raycast in self._raycasts do
+		raycast.stopped:fire()
+	end
+	self._scheduler:Disconnect()
+end
+
+local function startScheduler(self: Flashcast): RBXScriptConnection
+	local function moveRaycast(raycast: Raycast, deltaTime: number)
 		local direction = raycast.direction * deltaTime
 
 		local raycastResult = if self._spatialQuery
 			then self._spatialQuery(raycast, deltaTime)
-			else self._worldRoot:Raycast(raycast.position, direction, raycastParams)
+			else self._worldRoot:Raycast(raycast.position, direction, raycast.raycastParams)
 
 		if raycastResult then
 			table.insert(raycast.results, raycastResult)
@@ -145,13 +159,16 @@ local function cast(
 		raycast.state.touched = raycastResult
 	end
 
-	local function processStepCallbacks(stepCallbacks: { StepCallback }, deltaTime: number)
+	local function stopRaycast(raycast: Raycast)
+		table.remove(self._raycasts, table.find(self._raycasts, raycast))
+		raycast.stopped:fire()
+	end
+
+	local function processStepCallbacks(stepCallbacks: { StepCallback }, ...)
 		for _, callback in stepCallbacks do
-			local result = callback(raycast, deltaTime)
+			local result = callback(...)
 
 			if result == Flashcast.Result.Stop then
-				connection:Disconnect()
-				task.spawn(thread)
 				return result
 			end
 		end
@@ -159,40 +176,54 @@ local function cast(
 		return
 	end
 
-	connection = RunService.Heartbeat:Connect(function()
+	local function stepRaycast(raycast: Raycast)
 		local deltaTime = os.clock() - raycast.state.lastTick
 
-		if processStepCallbacks(self._onStepNoTickCallbacks, deltaTime) == Flashcast.Result.Stop then
-			return
+		if processStepCallbacks(self._onStepNoTickCallbacks, raycast, deltaTime) == Flashcast.Result.Stop then
+			return Flashcast.Result.Stop
 		end
 
 		if deltaTime < raycast.tick then
 			return
 		end
 
-		if processStepCallbacks(self._beforeStepCallbacks, deltaTime) == Flashcast.Result.Stop then
-			return
+		if processStepCallbacks(self._beforeStepCallbacks, raycast, deltaTime) == Flashcast.Result.Stop then
+			return Flashcast.Result.Stop
 		end
 
-		move(deltaTime)
-		processStepCallbacks(self._afterStepCallbacks, deltaTime)
+		moveRaycast(raycast, deltaTime)
+
+		if processStepCallbacks(self._afterStepCallbacks, raycast, deltaTime) == Flashcast.Result.Stop then
+			return Flashcast.Result.Stop
+		end
 
 		raycast.state.lastTick = os.clock()
-	end)
+		return
+	end
 
-	coroutine.yield()
-	return table.freeze(raycast)
+	local function step(raycast: Raycast)
+		if stepRaycast(raycast) == Flashcast.Result.Stop then
+			stopRaycast(raycast)
+		end
+	end
+
+	return RunService.PostSimulation:Connect(function()
+		for index, raycast in self._raycasts do
+			task.spawn(step, raycast)
+		end
+	end)
 end
 
 --- @return Flashcast
 function Flashcast.new()
-	return {
+	local self = {
 		_worldRoot = workspace,
 		_tick = 0,
 		_beforeStepCallbacks = {} :: { StepCallback },
 		_afterStepCallbacks = {} :: { StepCallback },
 		_onStepNoTickCallbacks = {} :: { StepCallback },
 		_spatialQuery = nil,
+		_raycasts = {} :: { Raycast },
 		worldRoot = worldRoot,
 		tick = tick,
 		beforeStep = beforeStep,
@@ -200,7 +231,12 @@ function Flashcast.new()
 		onStepNoTick = onStepNoTick,
 		spatialQuery = spatialQuery,
 		cast = cast,
+		destroy = destroy,
 	}
+
+	self._scheduler = startScheduler(self)
+
+	return self
 end
 
 export type Flashcast = typeof(Flashcast.new(...))
