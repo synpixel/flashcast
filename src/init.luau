@@ -2,6 +2,7 @@ local RunService = game:GetService("RunService")
 
 --- @type StepCallback (raycast: Raycast, deltaTime: number) -> Vector3 | Result
 --- @within Flashcast
+--- Takes a Raycast instance and delta time and gives back a new direction or a [Result](/api/Flashcast/#Result)
 export type StepCallback = (raycast: Raycast, deltaTime: number) -> Vector3 | number
 
 --- @interface Raycast
