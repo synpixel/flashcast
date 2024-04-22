@@ -9,12 +9,14 @@ export type StepCallback = (raycast: Raycast, deltaTime: number) -> Vector3 | nu
 --- @within Flashcast
 --- .position Vector3
 --- .direction Vector3
+--- .raycastParams? RaycastParams
 --- .results { RaycastResult } -- RaycastResults ordered from earliest to latest
 --- .state { lastTick: number, distanceTraveled: number, touched?: RaycastResult, [any]: any } -- for preserving state throughout the raycasting
 --- .tick number -- by default the Flashcast instance's tick
 export type Raycast = {
 	position: Vector3,
 	direction: Vector3,
+	raycastParams: RaycastParams?,
 	results: { RaycastResult },
 	state: { lastTick: number, distanceTraveled: number, touched: RaycastResult?, [any]: any },
 	tick: number,
@@ -41,13 +43,33 @@ local function tick(self: Flashcast, tick: number): Flashcast
 	return self
 end
 
---- @method onStep
+--- @method beforeStep
 --- @within Flashcast
 --- @param step StepCallback
 --- @return Flashcast
---- Adds a step callback to the schedule
-local function onStep(self: Flashcast, step: StepCallback): Flashcast
-	table.insert(self._stepCallbacks, step)
+--- Adds a step callback scheduled to run before calculations
+local function beforeStep(self: Flashcast, step: StepCallback): Flashcast
+	table.insert(self._beforeStepCallbacks, step)
+	return self
+end
+
+--- @method afterStep
+--- @within Flashcast
+--- @param step StepCallback
+--- @return Flashcast
+--- Adds a step callback scheduled to run after calculations
+local function afterStep(self: Flashcast, step: StepCallback): Flashcast
+	table.insert(self._afterStepCallbacks, step)
+	return self
+end
+
+--- @method spatialQuery
+--- @within Flashcast
+--- @param query (raycast: Raycast, deltaTime: number) -> RaycastResult?
+--- @return Flashcast
+--- Overrides the default spatial query ([WorldRoot.Raycast](https://create.roblox.com/docs/reference/engine/classes/WorldRoot#Raycast))
+local function spatialQuery(self: Flashcast, query: (raycast: Raycast, deltaTime: number) -> RaycastResult?): Flashcast
+	self._spatialQuery = query
 	return self
 end
 
@@ -63,6 +85,7 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 	local raycast = {}
 	raycast.position = origin
 	raycast.direction = direction
+	raycast.raycastParams = raycastParams
 	raycast.results = {}
 	raycast.state = {
 		lastTick = os.clock() - self._tick,
@@ -72,9 +95,12 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 	raycast.tick = self._tick
 
 	local thread = coroutine.running()
+	local connection
 
-	local function move(old: Vector3, new: Vector3)
-		local raycastResult = workspace:Raycast(old, (new - old), raycastParams)
+	local function move(old: Vector3, new: Vector3, deltaTime: number)
+		local raycastResult = if self._spatialQuery
+			then self._spatialQuery(raycast, deltaTime)
+			else workspace:Raycast(old, (new - old), raycastParams)
 
 		if raycastResult then
 			table.insert(raycast.results, raycastResult)
@@ -85,14 +111,8 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 		raycast.state.touched = raycastResult
 	end
 
-	local connection
-	connection = RunService.Heartbeat:Connect(function()
-		local deltaTime = os.clock() - raycast.state.lastTick
-		if deltaTime < raycast.tick then
-			return
-		end
-
-		for _, callback in self._stepCallbacks do
+	local function processStepCallbacks(stepCallbacks: { StepCallback }, deltaTime: number)
+		for _, callback in stepCallbacks do
 			local direction = callback(raycast, deltaTime)
 
 			if direction == Flashcast.Result.Pass then
@@ -100,7 +120,7 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 			elseif direction == Flashcast.Result.Stop then
 				connection:Disconnect()
 				task.spawn(thread)
-				return
+				return Flashcast.Result.Stop
 			elseif typeof(direction) == "Vector3" then
 				raycast.direction = direction
 			else
@@ -110,7 +130,22 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 			end
 		end
 
-		move(raycast.position, raycast.position + raycast.direction * deltaTime)
+		return Flashcast.Result.Pass
+	end
+
+	connection = RunService.Heartbeat:Connect(function()
+		local deltaTime = os.clock() - raycast.state.lastTick
+		if deltaTime < raycast.tick then
+			return
+		end
+
+		if processStepCallbacks(self._beforeStepCallbacks, deltaTime) == Flashcast.Result.Stop then
+			return
+		end
+
+		move(raycast.position, raycast.position + raycast.direction * deltaTime, deltaTime)
+		processStepCallbacks(self._afterStepCallbacks, deltaTime)
+
 		raycast.state.lastTick = os.clock()
 	end)
 
@@ -122,9 +157,13 @@ end
 function Flashcast.new()
 	return {
 		_tick = 0,
-		_stepCallbacks = {} :: { StepCallback },
+		_beforeStepCallbacks = {} :: { StepCallback },
+		_afterStepCallbacks = {} :: { StepCallback },
+		_spatialQuery = nil,
 		tick = tick,
-		onStep = onStep,
+		beforeStep = beforeStep,
+		afterStep = afterStep,
+		spatialQuery = spatialQuery,
 		cast = cast,
 	}
 end
