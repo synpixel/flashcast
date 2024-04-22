@@ -52,16 +52,18 @@ local function createSignal<T...>(): Signal<T...>
 
 			task.spawn(connection._callback, ...)
 		end
-
-		for index, thread in signal._yieldedThreads do
-			table.remove(signal._yieldedThreads, index)
-			task.spawn(thread, ...)
-		end
 	end
 
 	--- @within Signal
 	function signal:wait(): T...
-		table.insert(signal._yieldedThreads, coroutine.running())
+		local thread = coroutine.running()
+		signal._yieldedThreads[thread] = true
+
+		signal:once(function(...)
+			signal._yieldedThreads[thread] = nil
+			task.spawn(thread, ...)
+		end)
+
 		return coroutine.yield()
 	end
 
