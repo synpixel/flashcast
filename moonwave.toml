@@ -9,5 +9,12 @@ enabled = true
 title = "Straightforward"
 description = "No abstractions, no weird gimmicks, just straight to the point."
 
+[[home.features]]
+title = "Customizable"
+description = "Flashcast was made for fine-grained usage so you could implement your own systems at will."
+
+[[home.features]]
+title = "Lightweight"
+
 [docusaurus]
 tagline = "simple library for bullets and such made for Roblox"
