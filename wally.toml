@@ -1,9 +1,9 @@
 [package]
 name = "synpixel/flashcast"
 description = "simple library for bullets and such made for Roblox"
-version = "0.3.0"
+version = "0.3.1"
 license = "MIT"
-authors = ["Elttob"]
+authors = ["synpixel"]
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
