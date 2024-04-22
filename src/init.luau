@@ -98,10 +98,17 @@ end
 --- @param origin Vector3
 --- @param direction Vector3
 --- @param raycastParams? RaycastParams
+--- @param defaultState? { [any]: any }
 --- @return Raycast
 --- @yields
 --- This will yield until one of the step callbacks returns Result.Stop
-local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycastParams: RaycastParams?): Raycast
+local function cast(
+	self: Flashcast,
+	origin: Vector3,
+	direction: Vector3,
+	raycastParams: RaycastParams?,
+	defaultState: { [any]: any }?
+): Raycast
 	local raycast = {}
 	raycast.position = origin
 	raycast.direction = direction
@@ -113,6 +120,12 @@ local function cast(self: Flashcast, origin: Vector3, direction: Vector3, raycas
 		touched = nil,
 	}
 	raycast.tick = self._tick
+
+	if defaultState then
+		for key, value in defaultState do
+			raycast.state[key] = value
+		end
+	end
 
 	local thread = coroutine.running()
 	local connection
