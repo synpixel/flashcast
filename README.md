@@ -2,6 +2,6 @@
 
 simple library for bullets and such made for Roblox
 
-## examples
+## Examples
 
-- https://www.roblox.com/games/17247702703/Fastcast-Rockets
+- https://www.roblox.com/games/17247702703/Flashcast-Rockets

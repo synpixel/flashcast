@@ -1,0 +1,13 @@
+title = "Flashcast"
+
+gitSourceBranch = "main"
+
+[home]
+enabled = true
+
+[[home.features]]
+title = "Straightforward"
+description = "No abstractions, no weird gimmicks, just straight to the point."
+
+[docusaurus]
+tagline = "simple library for bullets and such made for Roblox"
