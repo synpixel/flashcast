@@ -1,9 +1,9 @@
 local RunService = game:GetService("RunService")
 
---- @type StepCallback (raycast: Raycast, deltaTime: number) -> Vector3 | Result
+--- @type StepCallback (raycast: Raycast, deltaTime: number) -> Result?
 --- @within Flashcast
---- Takes a Raycast instance and delta time and gives back a new direction or a [Result](/api/Flashcast/#Result)
-export type StepCallback = (raycast: Raycast, deltaTime: number) -> Vector3 | number
+--- Takes a Raycast instance and delta time and gives back a [Result](/api/Flashcast/#Result)
+export type StepCallback = (raycast: Raycast, deltaTime: number) -> number?
 
 --- @interface Raycast
 --- @within Flashcast
@@ -25,12 +25,11 @@ export type Raycast = {
 --- @class Flashcast
 local Flashcast = {}
 
---- @prop Result { Pass, Stop }
+--- @prop Result { Stop }
 --- @within Flashcast
 --- Different results (outcomes) of step callbacks
 Flashcast.Result = {
-	Pass = 1,
-	Stop = 2,
+	Stop = 1,
 }
 
 --- @method worldRoot
@@ -146,24 +145,16 @@ local function cast(
 
 	local function processStepCallbacks(stepCallbacks: { StepCallback }, deltaTime: number)
 		for _, callback in stepCallbacks do
-			local direction = callback(raycast, deltaTime)
+			local result = callback(raycast, deltaTime)
 
-			if direction == Flashcast.Result.Pass then
-				continue
-			elseif direction == Flashcast.Result.Stop then
+			if result == Flashcast.Result.Stop then
 				connection:Disconnect()
 				task.spawn(thread)
-				return Flashcast.Result.Stop
-			elseif typeof(direction) == "Vector3" then
-				raycast.direction = direction
-			else
-				error(
-					"step callbacks must return a Vector3 or a Flashcast.Result. if you do not wish to change the direction, return Flashcast.Result.Pass."
-				)
+				return result
 			end
 		end
 
-		return Flashcast.Result.Pass
+		return
 	end
 
 	connection = RunService.Heartbeat:Connect(function()
