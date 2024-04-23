@@ -144,13 +144,24 @@ local function cast(
 	return raycast
 end
 
---- @method destroy
+--- @method clear
 --- @within Flashcast
---- Enables the Flashcast instance to be garbage collected
-local function destroy(self: Flashcast)
+--- Clears all active raycasts
+--- :::info
+--- Calling this will fire all .stopped signals
+local function clear(self: Flashcast)
 	for _, raycast in self._raycasts do
 		raycast.stopped:fire()
 	end
+end
+
+--- @method destroy
+--- @within Flashcast
+--- Enables the Flashcast instance to be garbage collected
+--- :::info
+--- Calling this will fire all .stopped signals
+local function destroy(self: Flashcast)
+	self:clear()
 	self._scheduler:Disconnect()
 end
 
@@ -238,6 +249,7 @@ function Flashcast.new()
 		onStepNoTick = onStepNoTick,
 		spatialQuery = spatialQuery,
 		cast = cast,
+		clear = clear,
 		destroy = destroy,
 	}
 
