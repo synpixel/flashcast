@@ -15,6 +15,7 @@ export type StepCallback = (raycast: Raycast, deltaTime: number) -> number?
 --- .state { lastTick: number, distanceTraveled: number, touched?: RaycastResult, [any]: any } -- for preserving state throughout the raycasting
 --- .tick number -- by default the Flashcast instance's tick
 --- .stopped Signal<()>
+--- .stop (self: Raycast) -> ()
 export type Raycast = {
 	position: Vector3,
 	direction: Vector3,
@@ -23,6 +24,7 @@ export type Raycast = {
 	state: { lastTick: number, distanceTraveled: number, touched: RaycastResult?, [any]: any },
 	tick: number,
 	stopped: createSignal.Signal<()>,
+	stop: (self: Raycast) -> (),
 }
 
 --- @class Flashcast
@@ -136,30 +138,30 @@ local function cast(
 		end
 	end
 
-	table.insert(self._raycasts, raycast)
+	function raycast:stop()
+		raycast.stopped:fire()
+	end
+
 	raycast.stopped:connect(function()
 		table.remove(self._raycasts, table.find(self._raycasts, raycast))
 	end)
+	table.insert(self._raycasts, raycast)
 
 	return raycast
 end
 
 --- @method clear
 --- @within Flashcast
---- Clears all active raycasts
---- :::info
---- Calling this will fire all .stopped signals
+--- Stops all active raycasts
 local function clear(self: Flashcast)
 	for _, raycast in self._raycasts do
-		raycast.stopped:fire()
+		raycast:stop()
 	end
 end
 
 --- @method destroy
 --- @within Flashcast
 --- Enables the Flashcast instance to be garbage collected
---- :::info
---- Calling this will fire all .stopped signals
 local function destroy(self: Flashcast)
 	self:clear()
 	self._scheduler:Disconnect()
@@ -221,7 +223,7 @@ local function startScheduler(self: Flashcast): RBXScriptConnection
 
 	local function step(raycast: Raycast)
 		if stepRaycast(raycast) == Flashcast.Result.Stop then
-			raycast.stopped:fire()
+			raycast:stop()
 		end
 	end
 
