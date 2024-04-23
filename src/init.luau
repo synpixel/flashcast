@@ -207,7 +207,7 @@ local function startScheduler(self: Flashcast): RBXScriptConnection
 		end
 	end
 
-	return RunService.PostSimulation:Connect(function()
+	return RunService.Heartbeat:Connect(function()
 		for _, raycast in self._raycasts do
 			task.spawn(step, raycast)
 		end
