@@ -137,6 +137,12 @@ local function cast(
 	end
 
 	table.insert(self._raycasts, raycast)
+	local index = #self._raycasts
+
+	raycast.stopped:connect(function()
+		table.remove(self._raycasts, index)
+	end)
+
 	return raycast
 end
 
@@ -165,11 +171,6 @@ local function startScheduler(self: Flashcast): RBXScriptConnection
 		raycast.position += direction
 		raycast.state.distanceTraveled += direction.Magnitude
 		raycast.state.touched = raycastResult
-	end
-
-	local function stopRaycast(raycast: Raycast)
-		table.remove(self._raycasts, table.find(self._raycasts, raycast))
-		raycast.stopped:fire()
 	end
 
 	local function processStepCallbacks(stepCallbacks: { StepCallback }, ...)
@@ -211,7 +212,7 @@ local function startScheduler(self: Flashcast): RBXScriptConnection
 
 	local function step(raycast: Raycast)
 		if stepRaycast(raycast) == Flashcast.Result.Stop then
-			stopRaycast(raycast)
+			raycast.stopped:fire()
 		end
 	end
 
