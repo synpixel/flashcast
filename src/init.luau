@@ -137,10 +137,8 @@ local function cast(
 	end
 
 	table.insert(self._raycasts, raycast)
-	local index = #self._raycasts
-
 	raycast.stopped:connect(function()
-		table.remove(self._raycasts, index)
+		table.remove(self._raycasts, table.find(self._raycasts, raycast))
 	end)
 
 	return raycast
