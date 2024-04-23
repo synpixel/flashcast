@@ -87,12 +87,17 @@ end
 
 --- @method spatialQuery
 --- @within Flashcast
---- @param query (origin: Vector3, direction: Vector3, raycast: Raycast) -> RaycastResult?
+--- @param query (origin: Vector3, direction: Vector3, worldRoot: WorldRoot, raycast: Raycast) -> RaycastResult?
 --- @return Flashcast
 --- Overrides the default spatial query ([WorldRoot.Raycast](https://create.roblox.com/docs/reference/engine/classes/WorldRoot#Raycast))
 local function spatialQuery(
 	self: Flashcast,
-	query: (origin: Vector3, direction: Vector3, raycast: Raycast) -> RaycastResult?
+	query: (
+		origin: Vector3,
+		direction: Vector3,
+		worldRoot: WorldRoot,
+		raycast: Raycast
+	) -> RaycastResult?
 ): Flashcast
 	self._spatialQuery = query
 	return self
@@ -150,7 +155,7 @@ local function startScheduler(self: Flashcast): RBXScriptConnection
 		local direction = raycast.direction * deltaTime
 
 		local raycastResult = if self._spatialQuery
-			then self._spatialQuery(raycast.position, direction, raycast)
+			then self._spatialQuery(raycast.position, direction, self._worldRoot, raycast)
 			else self._worldRoot:Raycast(raycast.position, direction, raycast.raycastParams)
 
 		if raycastResult then
