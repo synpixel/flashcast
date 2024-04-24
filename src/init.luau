@@ -119,7 +119,6 @@ local function cast(
 	raycast.tick = self._tick
 	raycast.stopped = createSignal()
 	raycast.state = {
-		lastTick = os.clock() - (if typeof(raycast.tick) == "function" then raycast.tick(raycast) else raycast.tick),
 		distanceTraveled = 0,
 		touched = nil,
 	}
@@ -137,6 +136,10 @@ local function cast(
 	raycast.stopped:connect(function()
 		table.remove(self._raycasts, table.find(self._raycasts, raycast))
 	end)
+
+	raycast.state.lastTick = os.clock()
+		- (if typeof(raycast.tick) == "function" then raycast.tick(raycast) else raycast.tick)
+
 	table.insert(self._raycasts, raycast)
 
 	return raycast
