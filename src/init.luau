@@ -13,7 +13,7 @@ export type StepCallback = (raycast: Raycast, deltaTime: number) -> number?
 --- .raycastParams? RaycastParams
 --- .results { RaycastResult } -- RaycastResults ordered from earliest to latest
 --- .state { lastTick: number, distanceTraveled: number, touched?: RaycastResult, [any]: any } -- for preserving state throughout the raycasting
---- .tick number -- by default the Flashcast instance's tick
+--- .tick number | (raycast: Raycast) -> number -- by default the Flashcast instance's tick
 --- .stopped Signal<()>
 --- .stop (self: Raycast) -> ()
 export type Raycast = {
@@ -22,7 +22,7 @@ export type Raycast = {
 	raycastParams: RaycastParams?,
 	results: { RaycastResult },
 	state: { lastTick: number, distanceTraveled: number, touched: RaycastResult?, [any]: any },
-	tick: number,
+	tick: number | (raycast: Raycast) -> number,
 	stopped: createSignal.Signal<()>,
 	stop: (self: Raycast) -> (),
 }
@@ -49,10 +49,12 @@ end
 
 --- @method tick
 --- @within Flashcast
---- @param tick number
+--- @param tick number | (raycast: Raycast) -> number
 --- @return Flashcast
 --- Configures the amount of rays cast per second
-local function tick(self: Flashcast, tick: number): Flashcast
+--- :::info
+--- If the tick passed is a callback, it will run every frame. This is not for expensive operations.
+local function tick(self: Flashcast, tick: number | (raycast: Raycast) -> number): Flashcast
 	self._tick = tick
 	return self
 end
@@ -74,16 +76,6 @@ end
 --- Adds a step callback scheduled to run after calculations
 local function afterStep(self: Flashcast, step: StepCallback): Flashcast
 	table.insert(self._afterStepCallbacks, step)
-	return self
-end
-
---- @method onStepNoTick
---- @within Flashcast
---- @param step StepCallback
---- @return Flashcast
---- Adds a callback scheduled to run on every step regardless of the tick set, should not be used for expensive operations
-local function onStepNoTick(self: Flashcast, step: StepCallback): Flashcast
-	table.insert(self._onStepNoTickCallbacks, step)
 	return self
 end
 
@@ -124,13 +116,13 @@ local function cast(
 	raycast.direction = direction
 	raycast.raycastParams = raycastParams
 	raycast.results = {}
+	raycast.tick = self._tick
+	raycast.stopped = createSignal()
 	raycast.state = {
-		lastTick = os.clock() - self._tick,
+		lastTick = os.clock() - (if typeof(raycast.tick) == "function" then raycast.tick(raycast) else raycast.tick),
 		distanceTraveled = 0,
 		touched = nil,
 	}
-	raycast.tick = self._tick
-	raycast.stopped = createSignal()
 
 	if defaultState then
 		for key, value in defaultState do
@@ -199,11 +191,7 @@ local function startScheduler(self: Flashcast): RBXScriptConnection
 	local function stepRaycast(raycast: Raycast)
 		local deltaTime = os.clock() - raycast.state.lastTick
 
-		if processStepCallbacks(self._onStepNoTickCallbacks, raycast, deltaTime) == Flashcast.Result.Stop then
-			return Flashcast.Result.Stop
-		end
-
-		if deltaTime < raycast.tick then
+		if deltaTime < (if typeof(raycast.tick) == "function" then raycast.tick(raycast) else raycast.tick) then
 			return
 		end
 
@@ -241,14 +229,12 @@ function Flashcast.new()
 		_tick = 0,
 		_beforeStepCallbacks = {} :: { StepCallback },
 		_afterStepCallbacks = {} :: { StepCallback },
-		_onStepNoTickCallbacks = {} :: { StepCallback },
 		_spatialQuery = nil,
 		_raycasts = {} :: { Raycast },
 		worldRoot = worldRoot,
 		tick = tick,
 		beforeStep = beforeStep,
 		afterStep = afterStep,
-		onStepNoTick = onStepNoTick,
 		spatialQuery = spatialQuery,
 		cast = cast,
 		clear = clear,
