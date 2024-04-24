@@ -129,6 +129,9 @@ local function cast(
 		end
 	end
 
+	raycast.state.lastTick = os.clock()
+		- (if typeof(raycast.tick) == "function" then raycast.tick(raycast) else raycast.tick)
+
 	function raycast:stop()
 		raycast.stopped:fire()
 	end
@@ -136,9 +139,6 @@ local function cast(
 	raycast.stopped:connect(function()
 		table.remove(self._raycasts, table.find(self._raycasts, raycast))
 	end)
-
-	raycast.state.lastTick = os.clock()
-		- (if typeof(raycast.tick) == "function" then raycast.tick(raycast) else raycast.tick)
 
 	table.insert(self._raycasts, raycast)
 
