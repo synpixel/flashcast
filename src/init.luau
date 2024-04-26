@@ -97,6 +97,16 @@ local function spatialQuery(
 	return self
 end
 
+--- @method event
+--- @within Flashcast
+--- @param event RBXScriptSignal
+--- @return Flashcast
+--- Overrides the default lifecycle event ([RunService.Heartbeat](https://create.roblox.com/docs/reference/engine/classes/RunService#Heartbeat))
+local function event(self: Flashcast, event: RBXScriptSignal): Flashcast
+	self._event = event
+	return self
+end
+
 --- @method cast
 --- @within Flashcast
 --- @param origin Vector3
@@ -218,7 +228,7 @@ local function startScheduler(self: Flashcast): RBXScriptConnection
 		end
 	end
 
-	return RunService.Heartbeat:Connect(function()
+	return self._event:Connect(function()
 		for _, raycast in self._raycasts do
 			task.spawn(step, raycast)
 		end
@@ -233,12 +243,14 @@ function Flashcast.new()
 		_beforeStepCallbacks = {} :: { StepCallback },
 		_afterStepCallbacks = {} :: { StepCallback },
 		_spatialQuery = nil,
+		_event = RunService.Heartbeat,
 		_raycasts = {} :: { Raycast },
 		worldRoot = worldRoot,
 		tick = tick,
 		beforeStep = beforeStep,
 		afterStep = afterStep,
 		spatialQuery = spatialQuery,
+		event = event,
 		cast = cast,
 		clear = clear,
 		destroy = destroy,

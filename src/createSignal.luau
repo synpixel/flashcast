@@ -2,14 +2,15 @@ local function createConnection<T...>(signal: Signal<T...>, callback: (T...) -> 
 	local connection = {}
 	connection._callback = callback
 	connection._once = false
-	connection.disconnected = false
+	connection.connected = false
 
 	function connection:disconnect()
-		if connection.disconnected then
+		if not connection.connected then
 			error("connection was already disconnected")
 		end
 
-		connection.disconnected = true
+		connection.connected = false
+		connection.Connected = connection.Connected
 
 		local index = table.find(signal._connections, connection)
 		if not index then
@@ -18,6 +19,9 @@ local function createConnection<T...>(signal: Signal<T...>, callback: (T...) -> 
 
 		table.remove(signal._connections, index)
 	end
+
+	connection.Connected = connection.connected
+	connection.Disconnect = connection.disconnect
 
 	return connection
 end
@@ -66,6 +70,12 @@ local function createSignal<T...>(): Signal<T...>
 
 		return coroutine.yield()
 	end
+
+	-- support for libraries requiring signal-like objects
+	signal.Connect = signal.connect
+	signal.Once = signal.once
+	signal.Fire = signal.fire
+	signal.Wait = signal.Wait
 
 	return signal
 end
