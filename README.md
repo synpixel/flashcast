@@ -7,7 +7,7 @@ simple library for bullets and such made for Roblox
 Flashcast is up on Wally. You can install it simply by putting this in your `wally.toml` file
 
 ```toml
-Flashcast = "synpixel/flashcast@2.2.0"
+Flashcast = "synpixel/flashcast@2.3.0"
 ```
 
 ## Examples
