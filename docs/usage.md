@@ -34,3 +34,4 @@ local raycast = flashcast:cast(Vector3.new(0, 10, 0), direction * SPEED)
 ## Examples
 
 - https://www.roblox.com/games/17247702703/Flashcast-Rockets
+- https://create.roblox.com/store/asset/17307837568/Flashcast-Rocket-Launcher
