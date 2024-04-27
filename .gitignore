@@ -2,4 +2,7 @@
 /sourcemap.json
 
 # project build
+/flashcast.rbxm
+
+# moonwave build
 /build
