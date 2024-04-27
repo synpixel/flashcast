@@ -77,6 +77,16 @@ local function afterStep(self: Flashcast, step: StepCallback): Flashcast
 	return self
 end
 
+--- @method onStop
+--- @within Flashcast
+--- @param callback (raycast: Raycast) -> ()
+--- @return Flashcast
+--- Adds a callback scheduled to run when a raycast is stopped
+local function onStop(self: Flashcast, callback: (raycast: Raycast) -> ()): Flashcast
+	table.insert(self._onStopCallbacks, callback)
+	return self
+end
+
 --- @method spatialQuery
 --- @within Flashcast
 --- @param query (worldRoot: WorldRoot, origin: Vector3, direction: Vector3, raycast: Raycast) -> RaycastResult?
@@ -144,6 +154,9 @@ local function cast(
 
 	raycast.stopped:connect(function()
 		table.remove(self._raycasts, table.find(self._raycasts, raycast))
+		for _, callback in self._onStopCallbacks do
+			task.spawn(callback, raycast)
+		end
 	end)
 
 	table.insert(self._raycasts, raycast)
@@ -238,6 +251,7 @@ function Flashcast.new()
 		_tick = 0,
 		_beforeStepCallbacks = {} :: { StepCallback },
 		_afterStepCallbacks = {} :: { StepCallback },
+		_onStopCallbacks = {} :: { (raycast: Raycast) -> () },
 		_spatialQuery = nil,
 		_event = RunService.Heartbeat,
 		_raycasts = {} :: { Raycast },
@@ -245,6 +259,7 @@ function Flashcast.new()
 		tick = tick,
 		beforeStep = beforeStep,
 		afterStep = afterStep,
+		onStop = onStop,
 		spatialQuery = spatialQuery,
 		event = event,
 		cast = cast,
