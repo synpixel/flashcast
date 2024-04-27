@@ -9,9 +9,9 @@ Here's a small collection of "hooks" for common behavior that you could want to 
 ## Max Distance
 
 ```lua
-local function maxDistance(distance: number)
+local function maxDistance(cap: number)
     return function(raycast: Flashcast.Raycast)
-        if raycast.state.distanceTraveled > distance then
+        if raycast.state.distanceTraveled > cap then
             return Flashcast.Result.Stop
         end
         return
@@ -20,7 +20,8 @@ end
 ```
 
 ```lua
-local flashcast = Flashcast.new():beforeStep(maxDistance(1000))
+local cap = 1000
+local flashcast = Flashcast.new():beforeStep(maxDistance(cap))
 ```
 
 ## Acceleration
@@ -60,4 +61,27 @@ end
 
 ```lua
 local flashcast = Flashcast.new():afterStep(reflect)
+```
+
+## Visualization
+
+```lua
+local function visualize(duration: number)
+    return function(raycast: Flashcast.Raycast, deltaTime: number)
+	    local adornment = Instance.new("ConeHandleAdornment")
+        adornment.Adornee = workspace.Terrain
+        adornment.Radius = 0.25
+        adornment.Color3 = Color3.new()
+        adornment.Transparency = 0.5
+        adornment.CFrame = CFrame.lookAt(raycast.position, raycast.position + raycast.direction)
+        adornment.Height = raycast.direction.Magnitude * deltaTime
+        adornment.Parent = workspace.Terrain
+        Debris:AddItem(adornment, duration)
+    end
+end
+```
+
+```lua
+local duration = 1
+local flashcast = Flashcast.new():beforeStep(visualize(duration))
 ```
