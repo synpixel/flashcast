@@ -2,7 +2,7 @@ local function createConnection<T...>(signal: Signal<T...>, callback: (T...) -> 
 	local connection = {}
 	connection._callback = callback
 	connection._once = false
-	connection.connected = false
+	connection.connected = true
 
 	function connection:disconnect()
 		if not connection.connected then
@@ -10,7 +10,7 @@ local function createConnection<T...>(signal: Signal<T...>, callback: (T...) -> 
 		end
 
 		connection.connected = false
-		connection.Connected = connection.Connected
+		connection.Connected = connection.connected
 
 		local index = table.find(signal._connections, connection)
 		if not index then
@@ -75,7 +75,7 @@ local function createSignal<T...>(): Signal<T...>
 	signal.Connect = signal.connect
 	signal.Once = signal.once
 	signal.Fire = signal.fire
-	signal.Wait = signal.Wait
+	signal.Wait = signal.wait
 
 	return signal
 end
