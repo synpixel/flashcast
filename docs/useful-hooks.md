@@ -67,17 +67,19 @@ local flashcast = Flashcast.new():afterStep(reflect)
 
 ```lua
 local function visualize(duration: number)
-    return function(raycast: Flashcast.Raycast, deltaTime: number)
-	    local adornment = Instance.new("ConeHandleAdornment")
-        adornment.Adornee = workspace.Terrain
-        adornment.Radius = 0.25
-        adornment.Color3 = Color3.new()
-        adornment.Transparency = 0.5
-        adornment.CFrame = CFrame.lookAt(raycast.position, raycast.position + raycast.direction)
-        adornment.Height = raycast.direction.Magnitude * deltaTime
-        adornment.Parent = workspace.Terrain
-        Debris:AddItem(adornment, duration)
-    end
+	return function(raycast: Flashcast.Raycast, deltaTime: number)
+		local adornment = Instance.new("ConeHandleAdornment")
+		adornment.Adornee = workspace.Terrain
+		adornment.Radius = 0.25
+		adornment.Color3 = Color3.new()
+		adornment.Transparency = 0.5
+		adornment.CFrame = CFrame.lookAt(raycast.position, raycast.position + raycast.direction)
+		adornment.Height = raycast.direction.Magnitude * deltaTime
+		adornment.Parent = workspace.Terrain
+		task.delay(duration, function()
+			adornment:Destroy()
+		end)
+	end
 end
 ```
 
