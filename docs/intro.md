@@ -9,5 +9,5 @@ sidebar_position: 1
 Flashcast is up on Wally. You can install it simply by putting this in your `wally.toml` file
 
 ```toml
-Flashcast = "synpixel/flashcast@2.4.0"
+Flashcast = "synpixel/flashcast@2.4.1"
 ```
