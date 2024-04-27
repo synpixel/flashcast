@@ -44,3 +44,20 @@ end
 local gravity = Vector3.new(0, -workspace.Gravity, 0)
 local flashcast = Flashcast.new():afterStep(accelerate(gravity))
 ```
+
+## Reflection
+
+```lua
+local function reflect(raycast: Flashcast.Raycast, deltaTime: number)
+	local touched = raycast.state.touched
+	if touched then
+		local reflectedDirection = raycast.direction - (2 * raycast.direction:Dot(touched.Normal) * touched.Normal)
+		raycast.position = touched.Position
+		raycast.direction = reflectedDirection
+	end
+end
+```
+
+```lua
+local flashcast = Flashcast.new():afterStep(reflect)
+```
