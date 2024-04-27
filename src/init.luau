@@ -13,7 +13,6 @@ export type StepCallback = (raycast: Raycast, deltaTime: number) -> number?
 --- .raycastParams? RaycastParams
 --- .results { RaycastResult } -- RaycastResults ordered from earliest to latest
 --- .state { lastTick: number, distanceTraveled: number, touched?: RaycastResult, [any]: any } -- for preserving state throughout the raycasting
---- .tick number | (raycast: Raycast) -> number -- by default the Flashcast instance's tick
 --- .stopped Signal<()>
 --- .stop (self: Raycast) -> ()
 export type Raycast = {
@@ -22,7 +21,6 @@ export type Raycast = {
 	raycastParams: RaycastParams?,
 	results: { RaycastResult },
 	state: { lastTick: number, distanceTraveled: number, touched: RaycastResult?, [any]: any },
-	tick: number | (raycast: Raycast) -> number,
 	stopped: createSignal.Signal<()>,
 	stop: (self: Raycast) -> (),
 }
@@ -126,7 +124,6 @@ local function cast(
 	raycast.direction = direction
 	raycast.raycastParams = raycastParams
 	raycast.results = {}
-	raycast.tick = self._tick
 	raycast.stopped = createSignal()
 	raycast.state = {
 		distanceTraveled = 0,
@@ -139,8 +136,7 @@ local function cast(
 		end
 	end
 
-	raycast.state.lastTick = os.clock()
-		- (if typeof(raycast.tick) == "function" then raycast.tick(raycast) else raycast.tick)
+	raycast.state.lastTick = os.clock() - (if typeof(self._tick) == "function" then self._tick(raycast) else self._tick)
 
 	function raycast:stop()
 		raycast.stopped:fire()
@@ -204,7 +200,7 @@ local function startScheduler(self: Flashcast): RBXScriptConnection
 	local function stepRaycast(raycast: Raycast)
 		local deltaTime = os.clock() - raycast.state.lastTick
 
-		if deltaTime < (if typeof(raycast.tick) == "function" then raycast.tick(raycast) else raycast.tick) then
+		if deltaTime < (if typeof(self._tick) == "function" then self._tick(raycast) else self._tick) then
 			return
 		end
 
