@@ -259,6 +259,10 @@ local function createFlashcast(options: FlashcastOptions?)
 					callback(bullet, deltaTime)
 				end
 
+				if bullet:isStopped() then
+					return
+				end
+
 				bullet:move(bullet.position + bullet.direction * deltaTime)
 
 				for _, callback in bullet.behavior._afterStepCallbacks do
