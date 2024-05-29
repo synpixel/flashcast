@@ -1,277 +1,261 @@
+--!strict
+
 local RunService = game:GetService("RunService")
-local createSignal = require(script.createSignal)
 
---- @type StepCallback (raycast: Raycast, deltaTime: number) -> Result?
+--- @interface FlashcastOptions
+--- .worldRoot? WorldRoot -- default: Workspace
+--- .event? RBXScriptSignal -- default: RunService.Heartbeat
 --- @within Flashcast
---- Takes a Raycast instance and delta time and gives back a [Result](/api/Flashcast/#Result)
-export type StepCallback = (raycast: Raycast, deltaTime: number) -> number?
+export type FlashcastOptions = {
+	worldRoot: WorldRoot?,
+	event: RBXScriptSignal?,
+}
 
---- @interface Raycast
---- @within Flashcast
+--- @interface Bullet
+--- .behavior Behavior
 --- .position Vector3
 --- .direction Vector3
 --- .raycastParams? RaycastParams
---- .results { RaycastResult } -- RaycastResults ordered from earliest to latest
---- .state { lastTick: number, distanceTraveled: number, touched?: RaycastResult, [any]: any } -- for preserving state throughout the raycasting
---- .stopped Signal<()>
---- .stop (self: Raycast) -> ()
-export type Raycast = {
+--- .distanceTraveled number
+--- .raycastResults { RaycastResult }
+--- .desiredFramerate number
+--- .lastTick number
+--- .touched? RaycastResult
+--- .data { [any]: any }
+--- .move (self: Bullet, position: Vector3) -> ()
+--- .stop (self: Bullet) -> ()
+--- .isStopped (self: Bullet) -> ()
+--- @within Flashcast
+export type Bullet = {
+	behavior: Behavior,
 	position: Vector3,
 	direction: Vector3,
 	raycastParams: RaycastParams?,
-	results: { RaycastResult },
-	state: { lastTick: number, distanceTraveled: number, touched: RaycastResult?, [any]: any },
-	stopped: createSignal.Signal<()>,
-	stop: (self: Raycast) -> (),
+	distanceTraveled: number,
+	raycastResults: { RaycastResult },
+	desiredFramerate: number,
+	lastTick: number,
+	touched: RaycastResult?,
+	data: { [any]: any },
+	move: (self: Bullet, position: Vector3) -> (),
+	stop: (self: Bullet) -> (),
+	isStopped: (self: Bullet) -> boolean,
 }
 
---- @class Flashcast
-local Flashcast = {}
+export type BehaviorStepCallback = (bullet: Bullet, deltaTime: number) -> ()
 
---- @prop Result { Stop }
---- @within Flashcast
---- Different results (outcomes) of step callbacks
-Flashcast.Result = {
-	Stop = 1,
-}
+local function patchOptions<T>(options: T, default: T): T
+	if options == nil then
+		return table.clone(default :: any) :: any
+	end
 
---- @method worldRoot
---- @within Flashcast
---- @param worldRoot WorldRoot
---- @return Flashcast
---- Overrides the default [WorldRoot](https://create.roblox.com/docs/reference/engine/classes/WorldRoot) ([Workspace](https://create.roblox.com/docs/reference/engine/classes/Workspace))
-local function worldRoot(self: Flashcast, worldRoot: WorldRoot)
-	self._worldRoot = worldRoot
-	return self
+	local patchedOptions = table.clone(options :: any)
+
+	for key, value in default :: any do
+		if patchedOptions[key] == nil then
+			patchedOptions[key] = value
+		end
+	end
+
+	return patchedOptions :: any
 end
 
---- @method tick
---- @within Flashcast
---- @param tick number | (raycast: Raycast) -> number
---- @return Flashcast
---- Configures the amount of rays cast per second
---- :::info
---- If the tick passed is a callback, it will run every frame. This is not for expensive operations.
-local function tick(self: Flashcast, tick: number | (raycast: Raycast) -> number): Flashcast
-	self._tick = tick
-	return self
-end
+--- @class Behavior
+
+--- @method setDesiredFramerate
+--- @param desiredFramerate number
+--- @return Behavior
+--- @within Behavior
+--- sets a desired framerate for the behavior
 
 --- @method beforeStep
---- @within Flashcast
---- @param step StepCallback
---- @return Flashcast
---- Adds a step callback scheduled to run before calculations
-local function beforeStep(self: Flashcast, step: StepCallback): Flashcast
-	table.insert(self._beforeStepCallbacks, step)
-	return self
-end
+--- @param callback BehaviorStepCallback
+--- @return Behavior
+--- @within Behavior
+--- adds a step callback scheduled to run before moving the bullet
 
 --- @method afterStep
---- @within Flashcast
---- @param step StepCallback
---- @return Flashcast
---- Adds a step callback scheduled to run after calculations
-local function afterStep(self: Flashcast, step: StepCallback): Flashcast
-	table.insert(self._afterStepCallbacks, step)
-	return self
+--- @param callback BehaviorStepCallback
+--- @return Behavior
+--- @within Behavior
+--- adds a step callback scheduled to run after moving the bullet
+
+local function createBehavior()
+	local beforeStepCallbacks: { BehaviorStepCallback } = {}
+	local afterStepCallbacks: { BehaviorStepCallback } = {}
+
+	local behavior = {}
+	behavior._beforeStepCallbacks = beforeStepCallbacks
+	behavior._afterStepCallbacks = afterStepCallbacks
+	behavior.desiredFramerate = math.huge
+
+	function behavior.setDesiredFramerate(self: Behavior, desiredFramerate: number): Behavior
+		behavior.desiredFramerate = desiredFramerate
+		return behavior
+	end
+
+	function behavior.beforeStep(self: Behavior, callback: BehaviorStepCallback): Behavior
+		table.insert(beforeStepCallbacks, callback)
+		return behavior
+	end
+
+	function behavior.afterStep(self: Behavior, callback: BehaviorStepCallback): Behavior
+		table.insert(afterStepCallbacks, callback)
+		return behavior
+	end
+
+	return behavior
 end
 
---- @method onStop
---- @within Flashcast
---- @param callback (raycast: Raycast) -> ()
---- @return Flashcast
---- Adds a callback scheduled to run when a raycast is stopped
-local function onStop(self: Flashcast, callback: (raycast: Raycast) -> ()): Flashcast
-	table.insert(self._onStopCallbacks, callback)
-	return self
-end
+--- @class Flashcast
 
---- @method spatialQuery
+--- @function new
+--- @param options? FlashcastOptions
 --- @within Flashcast
---- @param query (worldRoot: WorldRoot, origin: Vector3, direction: Vector3, raycast: Raycast) -> RaycastResult?
---- @return Flashcast
---- Overrides the default spatial query ([WorldRoot.Raycast](https://create.roblox.com/docs/reference/engine/classes/WorldRoot#Raycast))
-local function spatialQuery(
-	self: Flashcast,
-	query: (
-		worldRoot: WorldRoot,
-		origin: Vector3,
-		direction: Vector3,
-		raycast: Raycast
-	) -> RaycastResult?
-): Flashcast
-	self._spatialQuery = query
-	return self
-end
+--- creates a new flashcast instance
 
---- @method event
+--- @function createBehavior
+--- @return Behavior
 --- @within Flashcast
---- @param event RBXScriptSignal
---- @return Flashcast
---- Overrides the default lifecycle event ([RunService.Heartbeat](https://create.roblox.com/docs/reference/engine/classes/RunService#Heartbeat))
-local function event(self: Flashcast, event: RBXScriptSignal): Flashcast
-	self._event = event
-	return self
-end
+--- creates a new behavior
 
---- @method cast
+--- @method getBullets
+--- @return { Bullet }
 --- @within Flashcast
+--- gets every bullet in the instance
+
+--- @method spawnBullet
+--- @param behavior Behavior
 --- @param origin Vector3
 --- @param direction Vector3
 --- @param raycastParams? RaycastParams
---- @param defaultState? { [any]: any }
---- @return Raycast
-local function cast(
-	self: Flashcast,
-	origin: Vector3,
-	direction: Vector3,
-	raycastParams: RaycastParams?,
-	defaultState: { [any]: any }?
-): Raycast
-	local raycast = {}
-	raycast.position = origin
-	raycast.direction = direction
-	raycast.raycastParams = raycastParams
-	raycast.results = {}
-	raycast.stopped = createSignal()
-	raycast.state = {
-		distanceTraveled = 0,
-		touched = nil,
-	}
+--- @return Bullet
+--- @within Flashcast
+--- spawns a bullet with a behavior
 
-	if defaultState then
-		for key, value in defaultState do
-			raycast.state[key] = value
-		end
-	end
-
-	raycast.state.lastTick = os.clock() - (if typeof(self._tick) == "function" then self._tick(raycast) else self._tick)
-
-	function raycast:stop()
-		raycast.stopped:fire()
-	end
-
-	raycast.stopped:connect(function()
-		table.remove(self._raycasts, table.find(self._raycasts, raycast))
-		for _, callback in self._onStopCallbacks do
-			task.spawn(callback, raycast)
-		end
-	end)
-
-	table.insert(self._raycasts, raycast)
-
-	return raycast
-end
+--- @method step
+--- @within Flashcast
+--- used internally to advance every bullet by one step
 
 --- @method clear
 --- @within Flashcast
---- Stops all active raycasts
-local function clear(self: Flashcast)
-	for _, raycast in self._raycasts do
-		raycast:stop()
-	end
-end
+--- clears all bullets in the instance
 
 --- @method destroy
 --- @within Flashcast
---- Enables the Flashcast instance to be garbage collected
-local function destroy(self: Flashcast)
-	self:clear()
-	self._scheduler:Disconnect()
-end
+--- enables the instance to be garbage collected (also clears all bullets)
 
-local function startScheduler(self: Flashcast): RBXScriptConnection
-	local function moveRaycast(raycast: Raycast, deltaTime: number)
-		local direction = raycast.direction * deltaTime
+local function createFlashcast(options: FlashcastOptions?)
+	local options = patchOptions(options, {
+		worldRoot = workspace,
+		event = RunService.Heartbeat,
+	}) :: { worldRoot: WorldRoot, event: RBXScriptSignal }
 
-		local raycastResult = if self._spatialQuery
-			then self._spatialQuery(self._worldRoot, raycast.position, direction, raycast)
-			else self._worldRoot:Raycast(raycast.position, direction, raycast.raycastParams)
+	local bullets: { Bullet } = {}
+	local scheduler: RBXScriptConnection = nil
 
-		if raycastResult then
-			table.insert(raycast.results, raycastResult)
-		end
+	local flashcast = {}
+	flashcast.worldRoot = options.worldRoot
+	flashcast.event = options.event
 
-		raycast.position += direction
-		raycast.state.distanceTraveled += direction.Magnitude
-		raycast.state.touched = raycastResult
+	function flashcast.getBullets(self: Flashcast): { Bullet }
+		return bullets
 	end
 
-	local function processStepCallbacks(stepCallbacks: { StepCallback }, ...)
-		for _, callback in stepCallbacks do
-			local result = callback(...)
+	function flashcast.spawnBullet(
+		self: Flashcast,
+		behavior: Behavior,
+		origin: Vector3,
+		direction: Vector3,
+		raycastParams: RaycastParams?
+	): Bullet
+		local bullet = {}
+		bullet.behavior = behavior
+		bullet.position = origin
+		bullet.direction = direction
+		bullet.raycastParams = raycastParams
 
-			if result == Flashcast.Result.Stop then
-				return result
+		bullet.distanceTraveled = 0
+		bullet.raycastResults = {}
+		bullet.desiredFramerate = behavior.desiredFramerate
+		bullet.lastTick = os.clock() - 1 / bullet.desiredFramerate
+		bullet.data = {}
+
+		function bullet.move(self: Bullet, position: Vector3)
+			local direction = position - bullet.position
+
+			local raycastResult = flashcast.worldRoot:Raycast(bullet.position, direction, bullet.raycastParams)
+			if raycastResult then
+				table.insert(bullet.raycastResults, raycastResult)
+			end
+
+			bullet.position = position
+			bullet.distanceTraveled += direction.Magnitude
+			bullet.touched = raycastResult
+		end
+
+		function bullet.stop(self: Bullet)
+			local index = table.find(bullets, bullet)
+			if index ~= nil then
+				table.remove(bullets, index)
 			end
 		end
 
-		return
+		function bullet.isStopped(self: Bullet)
+			return table.find(bullets, bullet) == nil
+		end
+
+		table.insert(bullets, bullet)
+
+		return bullet
 	end
 
-	local function stepRaycast(raycast: Raycast)
-		local deltaTime = os.clock() - raycast.state.lastTick
+	function flashcast.step(self: Flashcast)
+		for _, bullet in bullets do
+			local deltaTime = os.clock() - bullet.lastTick
 
-		if deltaTime < (if typeof(self._tick) == "function" then self._tick(raycast) else self._tick) then
-			return
-		end
+			if deltaTime < 1 / bullet.desiredFramerate then
+				continue
+			end
 
-		if processStepCallbacks(self._beforeStepCallbacks, raycast, deltaTime) == Flashcast.Result.Stop then
-			return Flashcast.Result.Stop
-		end
+			bullet.lastTick = os.clock()
 
-		moveRaycast(raycast, deltaTime)
+			task.spawn(function()
+				for _, callback in bullet.behavior._beforeStepCallbacks do
+					callback(bullet, deltaTime)
+				end
 
-		if processStepCallbacks(self._afterStepCallbacks, raycast, deltaTime) == Flashcast.Result.Stop then
-			return Flashcast.Result.Stop
-		end
+				bullet:move(bullet.position + bullet.direction * deltaTime)
 
-		raycast.state.lastTick = os.clock()
-		return
-	end
-
-	local function step(raycast: Raycast)
-		if stepRaycast(raycast) == Flashcast.Result.Stop then
-			raycast:stop()
+				for _, callback in bullet.behavior._afterStepCallbacks do
+					callback(bullet, deltaTime)
+				end
+			end)
 		end
 	end
 
-	return self._event:Connect(function()
-		for _, raycast in self._raycasts do
-			task.spawn(step, raycast)
+	function flashcast.clear(self: Flashcast)
+		for _, bullet in bullets do
+			bullet:stop()
 		end
+	end
+
+	function flashcast.destroy(self: Flashcast)
+		flashcast:clear()
+		scheduler:Disconnect()
+	end
+
+	scheduler = flashcast.event:Connect(function()
+		flashcast:step()
 	end)
+
+	return flashcast
 end
 
---- @return Flashcast
-function Flashcast.new()
-	local self = {
-		_worldRoot = workspace,
-		_tick = 0,
-		_beforeStepCallbacks = {} :: { StepCallback },
-		_afterStepCallbacks = {} :: { StepCallback },
-		_onStopCallbacks = {} :: { (raycast: Raycast) -> () },
-		_spatialQuery = nil,
-		_event = RunService.Heartbeat,
-		_raycasts = {} :: { Raycast },
-		worldRoot = worldRoot,
-		tick = tick,
-		beforeStep = beforeStep,
-		afterStep = afterStep,
-		onStop = onStop,
-		spatialQuery = spatialQuery,
-		event = event,
-		cast = cast,
-		clear = clear,
-		destroy = destroy,
-	}
+export type Flashcast = typeof(createFlashcast(...))
+export type Behavior = typeof(createBehavior(...))
 
-	self._scheduler = startScheduler(self)
-
-	return self
-end
-
-export type Flashcast = typeof(Flashcast.new(...))
-
-return Flashcast
+return {
+	new = createFlashcast,
+	createBehavior = createBehavior,
+}

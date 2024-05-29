@@ -6,7 +6,7 @@ sidebar_position: 1
 
 ## Installation
 
-Flashcast is up on Wally. You can install it simply by putting this in your `wally.toml` file
+flashcast is up on wally. you can install it simply by putting this in your `wally.toml` file
 
 ```toml
 Flashcast = "synpixel/flashcast@2.5.0"

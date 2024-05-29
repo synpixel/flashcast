@@ -9,26 +9,32 @@ local SPEED = 25
 local MAX_DISTANCE = 1000
 local GRAVITY = Vector3.new(0, -workspace.Gravity, 0)
 
-local function gravity(raycast: Flashcast.Raycast, deltaTime: number)
-    local parallelComponent = raycast.direction:Dot(GRAVITY.Unit) * GRAVITY.Unit
-    local perpendicularComponent = raycast.direction - parallelComponent
+local function gravity(bullet: Flashcast.Bullet, deltaTime: number)
+    local parallelComponent = bullet.direction:Dot(GRAVITY.Unit) * GRAVITY.Unit
+    local perpendicularComponent = bullet.direction - parallelComponent
     local newDirection = perpendicularComponent + (parallelComponent + GRAVITY * deltaTime)
 
-    raycast.direction = newDirection.Unit * raycast.direction.Magnitude
+    bullet.direction = newDirection.Unit * bullet.direction.Magnitude
 end
 
-local function maxDistance(raycast: Flashcast.Raycast)
-    if raycast.state.distanceTraveled > MAX_DISTANCE then
-        return Flashcast.Result.Stop
+local function maxDistance(bullet: Flashcast.Bullet)
+    if bullet.distanceTraveled > MAX_DISTANCE then
+        bullet:stop()
     end
 end
 
 local flashcast = Flashcast.new()
-    :beforeStep(maxDistance)
-    :afterStep(gravity)
+local behavior = Flashcast.createBehavior()
+    :setDesiredFramerate(10) -- the bullet will move every 1 / 10 seconds
+    :beforeStep(maxDistance) -- applies a max distance check before moving the bullet
+    :afterStep(gravity) -- applies gravity after moving the bullet
 
 local direction = Random.new():NextUnitVector()
-local raycast = flashcast:cast(Vector3.new(0, 10, 0), direction * SPEED)
+local bullet = flashcast:spawnBullet(
+    behavior,
+    Vector3.new(0, 10, 0),
+    direction * SPEED
+)
 ```
 
 ## Examples
