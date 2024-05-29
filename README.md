@@ -1,6 +1,6 @@
 # Flashcast
 
-simple library for bullets and such made for Roblox
+simple library for bullets made for Roblox
 
 ## Installation
 
