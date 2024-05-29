@@ -1,20 +1,20 @@
 title = "Flashcast"
-
 gitSourceBranch = "main"
 
 [home]
 enabled = true
 
 [[home.features]]
-title = "Straightforward"
-description = "No abstractions, no weird gimmicks, just straight to the point."
+title = "straightforward"
+description = "much less abstractions than the alternative resources"
 
 [[home.features]]
-title = "Customizable"
-description = "Flashcast was made for fine-grained usage so you could implement your own systems at will."
+title = "customizable"
+description = "flashcast was made for fine-grained usage so you could implement your own systems at will"
 
 [[home.features]]
-title = "Lightweight"
+title = "lightweight"
+description = "flashcast is easy to pick up with minimal knowledge"
 
 [docusaurus]
-tagline = "simple library for bullets and such made for Roblox"
+tagline = "simple library for bullets made for Roblox"

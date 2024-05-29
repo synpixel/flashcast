@@ -4,24 +4,7 @@ sidebar_position: 3
 
 # Useful Hooks
 
-here's a small collection of "hooks" for common behavior that you could want to implement on a bullet.
-
-## Max Distance
-
-```lua
-local function maxDistance(cap: number)
-    return function(bullet: Flashcast.Bullet)
-        if bullet.distanceTraveled > cap then
-            bullet:stop()
-        end
-    end
-end
-```
-
-```lua
-local cap = 1000
-local flashcast = Flashcast.createBehavior():beforeStep(maxDistance(cap))
-```
+here's a small collection of "hooks" for common behavior that you could want to implement on a bullet
 
 ## Acceleration
 
@@ -42,7 +25,7 @@ end
 
 ```lua
 local gravity = Vector3.new(0, -workspace.Gravity, 0)
-local flashcast = Flashcast.createBehavior():afterStep(accelerate(gravity))
+local behavior = Flashcast.createBehavior():afterStep(accelerate(gravity))
 ```
 
 ## Reflection
@@ -58,10 +41,10 @@ end
 ```
 
 ```lua
-local flashcast = Flashcast.createBehavior():afterStep(reflect)
+local behavior = Flashcast.createBehavior():afterStep(reflect)
 ```
 
-## Visualization
+## Debugging
 
 ```lua
 local function visualize(duration: number)
@@ -83,5 +66,5 @@ end
 
 ```lua
 local duration = 1
-local flashcast = Flashcast.createBehavior():beforeStep(visualize(duration))
+local behavior = Flashcast.createBehavior():beforeStep(visualize(duration))
 ```

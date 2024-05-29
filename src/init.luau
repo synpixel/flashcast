@@ -11,21 +11,55 @@ export type FlashcastOptions = {
 	event: RBXScriptSignal?,
 }
 
---- @interface Bullet
---- .behavior Behavior
---- .position Vector3
---- .direction Vector3
---- .raycastParams? RaycastParams
---- .distanceTraveled number
---- .raycastResults { RaycastResult }
---- .desiredFramerate number
---- .lastTick number
---- .touched? RaycastResult
---- .data { [any]: any }
---- .move (self: Bullet, position: Vector3) -> ()
---- .stop (self: Bullet) -> ()
---- .isStopped (self: Bullet) -> ()
---- @within Flashcast
+--- @class Bullet
+
+--- @prop behavior Behavior
+--- @within Bullet
+
+--- @prop position Vector3
+--- @within Bullet
+
+--- @prop direction Vector3
+--- @within Bullet
+
+--- @prop raycastParams? RaycastParams
+--- @within Bullet
+
+--- @prop distanceTraveled number
+--- @within Bullet
+
+--- @prop raycastResults { RaycastResult }
+--- @within Bullet
+
+--- @prop desiredFramerate number
+--- @within Bullet
+--- the desired framerate which you want the bullet to move at, by default the behavior's desired framerate (you can modify this)
+
+--- @prop lastTick number
+--- @within Bullet
+--- the bullet's last resumption step
+
+--- @prop touched RaycastResult?
+--- @within Bullet
+--- the current RaycastResult, set every frame by flashcast
+
+--- @prop data { [any]: any }
+--- @within Bullet
+--- empty table for state
+
+--- @method move
+--- @param position Vector3
+--- @within Bullet
+--- moves the bullet, raycasting from the position to the goal
+
+--- @method stop
+--- @within Bullet
+--- stops the bullet
+
+--- @method isStopped
+--- @within Bullet
+--- gets whether or not the bullet has been stopped
+
 export type Bullet = {
 	behavior: Behavior,
 	position: Vector3,
