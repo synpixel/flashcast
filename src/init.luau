@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 
 --- @interface FlashcastOptions
 --- .worldRoot? WorldRoot -- default: Workspace
---- .event? RBXScriptSignal -- default: RunService.Heartbeat
+--- .event? RBXScriptSignal -- default: RunService.PostSimulation
 --- @within Flashcast
 export type FlashcastOptions = {
 	worldRoot: WorldRoot?,
