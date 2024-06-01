@@ -39,5 +39,5 @@ local bullet = flashcast:spawnBullet(
 
 ## Examples
 
-- https://www.roblox.com/games/17247702703/Flashcast-Rockets
-- https://create.roblox.com/store/asset/17307837568/Flashcast-Rocket-Launcher
+- https://www.roblox.com/games/17695354946/Flashcast-Example-1
+- https://www.roblox.com/games/17696744681/Flashcast-Example-2
