@@ -78,22 +78,6 @@ export type Bullet = {
 
 export type BehaviorStepCallback = (bullet: Bullet, deltaTime: number) -> ()
 
-local function patchOptions<T>(options: T, default: T): T
-	if options == nil then
-		return table.clone(default :: any) :: any
-	end
-
-	local patchedOptions = table.clone(options :: any)
-
-	for key, value in default :: any do
-		if patchedOptions[key] == nil then
-			patchedOptions[key] = value
-		end
-	end
-
-	return patchedOptions :: any
-end
-
 --- @class Behavior
 
 --- @method setDesiredFramerate
@@ -180,17 +164,14 @@ end
 --- enables the instance to be garbage collected (also clears all bullets)
 
 local function createFlashcast(options: FlashcastOptions?)
-	local options = patchOptions(options, {
-		worldRoot = workspace,
-		event = RunService.Heartbeat,
-	}) :: { worldRoot: WorldRoot, event: RBXScriptSignal }
+	local patchedOptions: FlashcastOptions = options or {}
 
 	local bullets: { Bullet } = {}
 	local scheduler: RBXScriptConnection = nil
 
 	local flashcast = {}
-	flashcast.worldRoot = options.worldRoot
-	flashcast.event = options.event
+	flashcast.worldRoot = patchedOptions.worldRoot or workspace
+	flashcast.event = patchedOptions.event or RunService.PostSimulation
 
 	function flashcast.getBullets(self: Flashcast): { Bullet }
 		return bullets
