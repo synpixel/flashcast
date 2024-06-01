@@ -279,8 +279,8 @@ local function createFlashcast(options: FlashcastOptions?)
 	end
 
 	function flashcast.destroy(self: Flashcast)
-		flashcast:clear()
 		scheduler:Disconnect()
+		flashcast:clear()
 	end
 
 	scheduler = flashcast.event:Connect(function()
