@@ -17,4 +17,4 @@ title = "lightweight"
 description = "flashcast is easy to pick up with minimal knowledge"
 
 [docusaurus]
-tagline = "simple library for bullets made for Roblox"
+tagline = "a fine-grained alternative to FastCast"

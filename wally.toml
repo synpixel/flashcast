@@ -1,6 +1,6 @@
 [package]
 name = "synpixel/flashcast"
-description = "simple library for bullets and such made for Roblox"
+description = "a fine-grained alternative to FastCast"
 version = "3.0.0"
 license = "MIT"
 authors = ["synpixel"]
