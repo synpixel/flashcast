@@ -151,6 +151,14 @@ end
 --- @within Flashcast
 --- spawns a bullet with a behavior
 
+--- @method stepBullet
+--- @param bullet Bullet
+--- @param deltaTime number
+--- @within Flashcast
+--- advances a bullet by one step
+--- :::info
+--- calling this method will not update the bullet's lastTick property
+
 --- @method step
 --- @within Flashcast
 --- used internally to advance every bullet by one step
@@ -225,6 +233,20 @@ local function createFlashcast(options: FlashcastOptions?)
 		return bullet
 	end
 
+	function flashcast.stepBullet(self: Flashcast, bullet: Bullet, deltaTime: number)
+		task.spawn(function()
+			for _, callback in bullet.behavior._beforeStepCallbacks do
+				callback(bullet, deltaTime)
+			end
+
+			bullet:move(bullet.position + bullet.direction * deltaTime)
+
+			for _, callback in bullet.behavior._afterStepCallbacks do
+				callback(bullet, deltaTime)
+			end
+		end)
+	end
+
 	function flashcast.step(self: Flashcast)
 		for _, bullet in bullets do
 			local deltaTime = os.clock() - bullet.lastTick
@@ -234,18 +256,7 @@ local function createFlashcast(options: FlashcastOptions?)
 			end
 
 			bullet.lastTick = os.clock()
-
-			task.spawn(function()
-				for _, callback in bullet.behavior._beforeStepCallbacks do
-					callback(bullet, deltaTime)
-				end
-
-				bullet:move(bullet.position + bullet.direction * deltaTime)
-
-				for _, callback in bullet.behavior._afterStepCallbacks do
-					callback(bullet, deltaTime)
-				end
-			end)
+			flashcast:stepBullet(bullet, deltaTime)
 		end
 	end
 
